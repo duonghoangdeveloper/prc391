@@ -1,6 +1,8 @@
 const express = require('express');
 const sharp = require('sharp');
 const multer = require('multer');
+
+const { uploadFileS3, deleteFileS3, getFileS3 } = require('../utils/s3');
 const User = require('../models/user');
 const auth = require('../middleware/auth');
 
@@ -68,19 +70,6 @@ router.get('/users/me', auth, async (req, res) => {
   res.send(req.user);
 });
 
-// router.get('/users/:id', async (req, res) => {
-//     const _id = req.params.id
-//     try {
-//         const user = await User.findById(_id)
-//         if(!user) {
-//             return res.status(404).send()
-//         }
-//         res.send(user)
-//     } catch (error) {
-//         res.status(500).send()
-//     }
-// })
-
 router.patch('/users/me', auth, async (req, res) => {
   const updates = Object.keys(req.body);
   const allowedUpdate = ['name', 'email', 'password'];
@@ -101,14 +90,14 @@ router.patch('/users/me', auth, async (req, res) => {
   }
 });
 
-router.delete('/users/me', auth, async (req, res) => {
-  try {
-    await req.user.remove();
-    res.send(req.user);
-  } catch (error) {
-    res.status(500).send();
-  }
-});
+// router.delete('/users/me', auth, async (req, res) => {
+//   try {
+//     await req.user.remove();
+//     res.send(req.user);
+//   } catch (error) {
+//     res.status(500).send();
+//   }
+// });
 
 const upload = multer({
   limits: {
@@ -119,9 +108,6 @@ const upload = multer({
       return cb(new Error('Please upload a image'));
     }
     cb(undefined, true);
-    // cb(new Error('File must be a PDF'))
-    // cb(undefined, true)
-    // cb(undefined, fale)
   },
 });
 
@@ -130,13 +116,49 @@ router.post(
   auth,
   upload.single('avatar'),
   async (req, res) => {
-    const buffer = await sharp(req.file.buffer)
-      .resize({ width: 250, height: 250 })
-      .png()
-      .toBuffer();
-    req.user.avatar = buffer;
-    await req.user.save();
-    res.send();
+    try {
+      const buffer = await sharp(req.file.buffer)
+        .resize({ width: 250, height: 250 })
+        .png()
+        .toBuffer();
+      // req.user.avatar = buffer;
+
+      // Delete old avatar from S3
+      if (req.user.avatar && req.user.avatar.key) {
+        await deleteFileS3(`${req.user.avatar.key}`);
+
+        let success = false;
+
+        // Make sure file has been already deleted
+        try {
+          await getFileS3(`${req.user.avatar.key}`);
+        } catch (err) {
+          if (err.statusCode === 404) {
+            success = true;
+          }
+        }
+
+        if (success) {
+          req.user.avatar = null;
+        } else {
+          throw new Error(`Delete old avatar failed`);
+        }
+      }
+
+      const data = await uploadFileS3({
+        body: buffer,
+      });
+
+      req.user.avatar = {
+        url: data.Location,
+        key: data.Key || data.key,
+      };
+
+      await req.user.save();
+      res.send(data.Location);
+    } catch (error) {
+      res.status(400).send({ error: error.message });
+    }
   },
   (error, req, res, next) => {
     res.status(400).send({ error: error.message });
@@ -144,9 +166,35 @@ router.post(
 );
 
 router.delete('/users/me/avatar', auth, async (req, res) => {
-  req.user.avatar = undefined;
-  await req.user.save();
-  res.send();
+  try {
+    // Delete old avatar from S3
+    if (req.user.avatar && req.user.avatar.key) {
+      await deleteFileS3(`${req.user.avatar.key}`);
+
+      let success = false;
+
+      // Make sure file has been already deleted
+      try {
+        await getFileS3(`${req.user.avatar.key}`);
+      } catch (err) {
+        if (err.statusCode === 404) {
+          success = true;
+        }
+      }
+
+      if (success) {
+        req.user.avatar = null;
+      } else {
+        throw new Error(`Delete old avatar failed`);
+      }
+    }
+
+    req.user.avatar = undefined;
+    await req.user.save();
+    res.send();
+  } catch (error) {
+    res.status(400).send({ error: error.message });
+  }
 });
 
 router.get('/users/:id/avatar', async (req, res) => {

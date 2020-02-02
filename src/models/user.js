@@ -35,6 +35,16 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    avatar: {
+      url: {
+        type: String,
+        required: true,
+      },
+      key: {
+        type: String,
+        required: true,
+      },
+    },
     tokens: [
       {
         token: {
@@ -43,9 +53,6 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
-    avatar: {
-      type: Buffer,
-    },
   },
   { timestamps: true }
 );
@@ -93,12 +100,6 @@ userSchema.statics.findByCredentials = async (email, password) => {
   }
   return user;
 };
-
-userSchema.virtual('tasks', {
-  ref: 'Task',
-  localField: '_id',
-  foreignField: 'owner',
-});
 
 const User = mongoose.model('User', userSchema);
 
