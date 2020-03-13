@@ -44,13 +44,11 @@ const userSchema = new mongoose.Schema(
       maxlength: 1000,
     },
     avatar: {
-      url: {
-        type: String,
-        required: true,
-      },
       key: {
         type: String,
-        required: true,
+      },
+      url: {
+        type: String,
       },
     },
     tokens: [
