@@ -5,9 +5,9 @@ const { userOne, setupDatabase } = require('./fixtures/db');
 
 beforeEach(setupDatabase);
 
-test('Should failed', async () => {
-  expect(true).toBeNull();
-});
+// test('Should failed', async () => {
+//   expect(true).toBeNull();
+// });
 
 test('Should signup a new user', async () => {
   const response = await request(app)
