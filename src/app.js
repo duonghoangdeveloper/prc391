@@ -8,6 +8,6 @@ const app = express();
 app.use(express.json());
 app.use(userRouter);
 app.use(postRouter);
-app.get('/', (req, res) => res.send('PRC391 group project! Expect not deploy!'));
+app.get('/', (req, res) => res.send('PRC391 group project!'));
 
 module.exports = app;
