@@ -13,7 +13,7 @@ test('Should signup a new user', async () => {
   const response = await request(app)
     .post('/users')
     .send({
-      name: 'Andrew',
+      displayName: 'Andrew',
       email: 'andrew@example.com',
       password: 'MyPass777!',
     })
@@ -26,7 +26,7 @@ test('Should signup a new user', async () => {
   // Assertions about the response
   expect(response.body).toMatchObject({
     user: {
-      name: 'Andrew',
+      displayName: 'Andrew',
       email: 'andrew@example.com',
     },
     token: user.tokens[0].token,
@@ -104,9 +104,9 @@ test('Should update valid user fields', async () => {
     .patch('/users/me')
     .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
     .send({
-      name: 'Jess',
+      displayName: 'Jess',
     })
     .expect(200);
   const user = await User.findById(userOne._id);
-  expect(user.name).toEqual('Jess');
+  expect(user.displayName).toEqual('Jess');
 });

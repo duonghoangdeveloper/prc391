@@ -4,8 +4,9 @@ const bcript = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const secret = process.env.JWT_SECRET;
+const Schema = mongoose.Schema;
 
-const userSchema = new mongoose.Schema(
+const userSchema = new Schema(
   {
     email: {
       type: String,
@@ -30,18 +31,16 @@ const userSchema = new mongoose.Schema(
         }
       },
     },
-    name: {
+    displayName: {
       type: String,
       required: true,
       trim: true,
       minlength: 3,
       maxlength: 100,
     },
-    bio: {
-      type: String,
-      trim: true,
-      minlength: 3,
-      maxlength: 1000,
+    isAdmin: {
+      type: Boolean,
+      default: false,
     },
     avatar: {
       key: {
@@ -62,6 +61,12 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.virtual('posts', {
+  ref: 'Post',
+  localField: '_id',
+  foreignField: 'user'
+})
 
 // Hash the plain text password before saving
 userSchema.pre('save', async function(next) {
@@ -88,7 +93,6 @@ userSchema.methods.toJSON = function() {
 
   delete userObject.password;
   delete userObject.tokens;
-  delete userObject.avatar;
 
   return userObject;
 };
@@ -98,9 +102,7 @@ userSchema.statics.findByCredentials = async (email, password) => {
   if (!user) {
     throw new Error('Unable to login');
   }
-
   const isMatch = await bcript.compare(password, user.password);
-
   if (!isMatch) {
     throw new Error('Unable to login');
   }
