@@ -1,14 +1,14 @@
-const express = require('express');
-const sharp = require('sharp');
+const express = require("express");
+const sharp = require("sharp");
 
-const upload = require('../utils/upload')
-const { uploadFileS3, deleteFileS3, getFileS3 } = require('../utils/s3');
-const User = require('../models/user');
-const auth = require('../middleware/auth');
+const upload = require("../utils/upload");
+const { uploadFileS3, deleteFileS3, getFileS3 } = require("../utils/s3");
+const User = require("../models/user");
+const auth = require("../middleware/auth");
 
 const router = new express.Router();
 
-router.get('/users', async (req, res) => {
+router.get("/users", async (req, res) => {
   try {
     const users = await User.find({});
     res.status(200).send(users);
@@ -17,7 +17,7 @@ router.get('/users', async (req, res) => {
   }
 });
 
-router.post('/users', async (req, res) => {
+router.post("/users", async (req, res) => {
   const user = new User(req.body);
 
   try {
@@ -30,7 +30,7 @@ router.post('/users', async (req, res) => {
   }
 });
 
-router.post('/users/login', async (req, res) => {
+router.post("/users/login", async (req, res) => {
   try {
     const user = await User.findByCredentials(
       req.body.email,
@@ -43,7 +43,7 @@ router.post('/users/login', async (req, res) => {
   }
 });
 
-router.post('/users/logout', auth, async (req, res) => {
+router.post("/users/logout", auth, async (req, res) => {
   try {
     req.user.tokens = req.user.tokens.filter(
       token => token.token !== req.token
@@ -55,7 +55,7 @@ router.post('/users/logout', auth, async (req, res) => {
   }
 });
 
-router.post('/users/logoutAll', auth, async (req, res) => {
+router.post("/users/logoutAll", auth, async (req, res) => {
   try {
     req.user.tokens = [];
     await req.user.save();
@@ -65,19 +65,19 @@ router.post('/users/logoutAll', auth, async (req, res) => {
   }
 });
 
-router.get('/users/me', auth, async (req, res) => {
+router.get("/users/me", auth, async (req, res) => {
   res.send(req.user);
 });
 
-router.patch('/users/me', auth, async (req, res) => {
+router.patch("/users/me", auth, async (req, res) => {
   const updates = Object.keys(req.body);
-  const allowedUpdate = ['displayName', 'email', 'password'];
+  const allowedUpdate = ["displayName", "email", "password"];
   const isValidOperation = updates.every(update =>
     allowedUpdate.includes(update)
   );
 
   if (!isValidOperation) {
-    return res.status(400).send({ error: 'Invalid updates!' });
+    return res.status(400).send({ error: "Invalid updates!" });
   }
   try {
     const { user } = req;
@@ -89,7 +89,7 @@ router.patch('/users/me', auth, async (req, res) => {
   }
 });
 
-router.delete('/users/me', auth, async (req, res) => {
+router.delete("/users/me", auth, async (req, res) => {
   try {
     await req.user.remove();
     res.send(req.user);
@@ -99,9 +99,9 @@ router.delete('/users/me', auth, async (req, res) => {
 });
 
 router.post(
-  '/users/me/avatar',
+  "/users/me/avatar",
   auth,
-  upload.single('avatar'),
+  upload.single("avatar"),
   async (req, res) => {
     try {
       const buffer = await sharp(req.file.buffer)
@@ -133,13 +133,13 @@ router.post(
 
       const data = await uploadFileS3({
         body: buffer,
-        folder: 'avatar',
+        folder: "avatar",
         filename: req.user._id.toString()
       });
 
       req.user.avatar = {
         url: data.Location,
-        key: data.Key || data.key,
+        key: data.Key || data.key
       };
 
       await req.user.save();
@@ -153,7 +153,7 @@ router.post(
   }
 );
 
-router.delete('/users/me/avatar', auth, async (req, res) => {
+router.delete("/users/me/avatar", auth, async (req, res) => {
   try {
     // Delete old avatar from S3
     if (req.user.avatar && req.user.avatar.key) {
@@ -185,7 +185,7 @@ router.delete('/users/me/avatar', auth, async (req, res) => {
   }
 });
 
-router.get('/users/:id/avatar', async (req, res) => {
+router.get("/users/:id/avatar", async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
 
@@ -193,7 +193,7 @@ router.get('/users/:id/avatar', async (req, res) => {
       throw new Error();
     }
 
-    res.set('Content-Type', 'image/png');
+    res.set("Content-Type", "image/png");
     res.send(user.avatar);
   } catch (error) {
     res.status(400).send();
